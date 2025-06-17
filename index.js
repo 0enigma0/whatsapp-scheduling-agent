@@ -10,12 +10,18 @@ const { scheduleReminder } = require('./reminder');
 
 dotenv.config();
 
-// ✅ Create service_account.json from base64 encoded env variable
-if (!fs.existsSync('service_account.json') && process.env.SERVICE_ACCOUNT_JSON_BASE64) {
-  console.log('🔽 Decoding service_account.json from base64 env variable...');
-  const json = Buffer.from(process.env.SERVICE_ACCOUNT_JSON_BASE64, 'base64').toString('utf-8');
-  fs.writeFileSync('service_account.json', json, { encoding: 'utf-8' });
-  console.log('✅ service_account.json written from base64');
+// ✅ Create service_account.json from environment variable (raw JSON or base64)
+if (!fs.existsSync('service_account.json')) {
+  if (process.env.SERVICE_ACCOUNT_JSON) {
+    console.log('🔽 Writing service_account.json from raw JSON env variable...');
+    fs.writeFileSync('service_account.json', process.env.SERVICE_ACCOUNT_JSON, { encoding: 'utf-8' });
+    console.log('✅ service_account.json written from raw JSON');
+  } else if (process.env.SERVICE_ACCOUNT_JSON_BASE64) {
+    console.log('🔽 Decoding service_account.json from base64 env variable...');
+    const json = Buffer.from(process.env.SERVICE_ACCOUNT_JSON_BASE64, 'base64').toString('utf-8');
+    fs.writeFileSync('service_account.json', json, { encoding: 'utf-8' });
+    console.log('✅ service_account.json written from base64');
+  }
 }
 
 const app = express();
@@ -65,7 +71,9 @@ app.post('/whatsapp-webhook', async (req, res) => {
 console.log('Private key preview:');
 try {
   let serviceAccountJson;
-  if (process.env.SERVICE_ACCOUNT_JSON_BASE64) {
+  if (process.env.SERVICE_ACCOUNT_JSON) {
+    serviceAccountJson = process.env.SERVICE_ACCOUNT_JSON;
+  } else if (process.env.SERVICE_ACCOUNT_JSON_BASE64) {
     serviceAccountJson = Buffer.from(process.env.SERVICE_ACCOUNT_JSON_BASE64, 'base64').toString('utf-8');
   } else if (fs.existsSync('service_account.json')) {
     serviceAccountJson = fs.readFileSync('service_account.json', 'utf-8');
