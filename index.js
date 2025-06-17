@@ -1,11 +1,28 @@
+if (!fs.existsSync('service_account.json') && process.env.SERVICE_ACCOUNT_JSON_URL) {
+  await downloadServiceAccountFile();
+}
+
 const dotenv = require('dotenv');   // ✅ Import first
 dotenv.config();                    // ✅ Then configure
 
 const fs = require('fs');
-if (!fs.existsSync('service_account.json') && process.env.SERVICE_ACCOUNT_JSON_BASE64) {
-  const json = Buffer.from(process.env.SERVICE_ACCOUNT_JSON_BASE64, 'base64').toString('utf-8');
-  fs.writeFileSync('service_account.json', json);
+const https = require('https');
+
+async function downloadServiceAccountFile() {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream("service_account.json");
+    https.get(process.env.SERVICE_ACCOUNT_JSON_URL, (res) => {
+      res.pipe(file);
+      file.on("finish", () => {
+        file.close(resolve);
+      });
+    }).on("error", reject);
+  });
 }
+
+console.log('BEGIN FILE CONTENT');
+console.log(fs.readFileSync('service_account.json', 'utf-8'));
+console.log('END FILE CONTENT');
 
 const express = require('express');
 const bodyParser = require('body-parser');
