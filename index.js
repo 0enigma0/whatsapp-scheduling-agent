@@ -1,4 +1,7 @@
-dotenv.config();const fs = require('fs');
+const dotenv = require('dotenv');   // ✅ Import first
+dotenv.config();                    // ✅ Then configure
+
+const fs = require('fs');
 if (!fs.existsSync('service_account.json') && process.env.SERVICE_ACCOUNT_JSON_BASE64) {
   const json = Buffer.from(process.env.SERVICE_ACCOUNT_JSON_BASE64, 'base64').toString('utf-8');
   fs.writeFileSync('service_account.json', json);
