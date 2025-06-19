@@ -28,6 +28,7 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+// index.js (cleaner webhook handler)
 app.post('/whatsapp-webhook', async (req, res) => {
   try {
     console.log('Received webhook request:', req.body);
@@ -37,23 +38,32 @@ app.post('/whatsapp-webhook', async (req, res) => {
 
     console.log(`Processing message: "${message}" from ${sender}`);
 
-    // Use Gemini to parse the event
-    const geminiResponse = await parseWithGemini(
-      `Extract the event title, datetime, and location from this message: "${message}". Respond in JSON with keys: title, datetime (ISO 8601), location.`
-    );
-    let event = null;
-    try {
-      event = JSON.parse(geminiResponse);
-      // Optionally, convert datetime to Date object
-      if (event && event.datetime) {
-        event.datetime = new Date(event.datetime);
-      }
-    } catch (e) {
-      console.error('Failed to parse Gemini response as JSON:', geminiResponse);
-    }
+    // This prompt is clearer and more robust
+    const prompt = `Analyze the following text to extract event details.
+Current date for context: ${new Date().toISOString()}
+Text: "${message}"
 
+Your response MUST be a single, raw JSON object and nothing else.
+Do not use Markdown (like \`\`\`json). Do not add any explanatory text.
+The JSON object must have these keys:
+- "title": string (the event title)
+- "datetime": string (the full date and time in ISO 8601 format, e.g., "2024-07-21T14:00:00")
+- "location": string or null
+
+If no specific event, date, or time can be found in the text, return a JSON object with a null value for "title".
+Example for "no event": {"title": null, "datetime": null, "location": null}
+`;
+
+    // parseWithGemini now returns a parsed object or null
+    const event = await parseWithGemini(prompt);
+
+    // The logic is now much simpler!
+    // We check for event and a non-null title from our prompt instructions.
     if (event && event.title && event.datetime) {
       console.log('Event extracted:', event);
+
+      // Convert datetime string to a Date object for the calendar/reminder functions
+      event.datetime = new Date(event.datetime);
 
       await addEventToCalendar(event);
       console.log('Event added to calendar');
@@ -68,11 +78,12 @@ app.post('/whatsapp-webhook', async (req, res) => {
       });
     }
 
-    console.log('No event detected in message');
+    console.log('No valid event detected in message.');
     res.status(200).json({
       status: 'no_event_detected',
-      message: 'No event found in the message'
+      message: 'No valid event could be extracted from the message.'
     });
+
   } catch (error) {
     console.error('Error processing webhook:', error);
     res.status(500).json({
