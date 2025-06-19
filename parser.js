@@ -1,17 +1,18 @@
-const chrono = require('chrono-node');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-function extractEvent(text) {
-  const results = chrono.parse(text);
-  if (results.length === 0) return null;
+const GEMINI_API_KEY = 'AIzaSyC4MdOAKM40TnoIbBEIM-3rNFc4dIaCKSA';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-  const date = results[0].start.date();
-  const title = text.split('on')[0].trim();
-
-  return {
-    title: title || 'Event from WhatsApp',
-    datetime: date,
-    location: 'TBD'
-  };
+/**
+ * Sends a prompt to Gemini and returns the response.
+ * @param {string} prompt - The prompt to send to Gemini.
+ * @returns {Promise<string>} - The response from Gemini.
+ */
+async function parseWithGemini(prompt) {
+  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
 }
 
-module.exports = { extractEvent };
+module.exports = { parseWithGemini };

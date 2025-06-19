@@ -4,7 +4,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const https = require('https');
-const { extractEvent } = require('./parser');
+const { parseWithGemini } = require('./parser');
 const { addEventToCalendar } = require('./calendar');
 const { scheduleReminder } = require('./reminder');
 
@@ -37,8 +37,22 @@ app.post('/whatsapp-webhook', async (req, res) => {
 
     console.log(`Processing message: "${message}" from ${sender}`);
 
-    const event = extractEvent(message);
-    if (event) {
+    // Use Gemini to parse the event
+    const geminiResponse = await parseWithGemini(
+      `Extract the event title, datetime, and location from this message: "${message}". Respond in JSON with keys: title, datetime (ISO 8601), location.`
+    );
+    let event = null;
+    try {
+      event = JSON.parse(geminiResponse);
+      // Optionally, convert datetime to Date object
+      if (event && event.datetime) {
+        event.datetime = new Date(event.datetime);
+      }
+    } catch (e) {
+      console.error('Failed to parse Gemini response as JSON:', geminiResponse);
+    }
+
+    if (event && event.title && event.datetime) {
       console.log('Event extracted:', event);
 
       await addEventToCalendar(event);
