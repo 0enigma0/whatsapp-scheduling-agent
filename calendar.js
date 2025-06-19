@@ -17,29 +17,45 @@ function createCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
-// This function is now safe to call *after* the service_account.json file is ready
-async function addEventToCalendar(event) {
-  const calendar = createCalendarClient();
+/**
+ * ADAPTED AND CORRECTED VERSION
+ * Adds an event to the Google Calendar using a specific time zone.
+ * @param {object} event - The event object with title, location, and a datetime STRING.
+ * @param {string} timeZone - The IANA time zone ID (e.g., 'Europe/Berlin').
+ */
+async function addEventToCalendar(event, timeZone) {
+  const calendar = google.calendar({ version: 'v3', auth }); // your auth object
 
-  const eventBody = {
+  // Create start and end time from the string
+  const startTime = event.datetime; // e.g., "2025-06-25T09:00:00"
+  // Let's assume a 1-hour duration for the event
+  const endTimeDate = new Date(new Date(startTime).getTime() + 60 * 60 * 1000);
+  const endTime = endTimeDate.toISOString().split('.')[0]; // Format to "YYYY-MM-DDTHH:mm:ss"
+
+  const eventResource = {
     summary: event.title,
+    location: event.location,
     start: {
-      dateTime: event.datetime.toISOString(),
-      timeZone: 'UTC'
+      dateTime: startTime, // Pass the RAW datetime string
+      timeZone: timeZone,  // TELL GOOGLE THE TIME ZONE
     },
     end: {
-      dateTime: new Date(event.datetime.getTime() + 60 * 60 * 1000).toISOString(),
-      timeZone: 'UTC'
+      dateTime: endTime,   // Pass the RAW datetime string for the end time
+      timeZone: timeZone,  // TELL GOOGLE THE TIME ZONE
     },
-    location: event.location
   };
 
-  const response = await calendar.events.insert({
-    calendarId: CALENDAR_ID,
-    requestBody: eventBody
-  });
-
-  return response.data;
+  try {
+    const res = await calendar.events.insert({
+      calendarId: 'primary', // or your specific calendar ID
+      resource: eventResource,
+    });
+    console.log('Calendar event created: ', res.data.htmlLink);
+    return res.data;
+  } catch (error) {
+    console.error('Error creating calendar event:', error);
+    throw error;
+  }
 }
 
 module.exports = { addEventToCalendar };

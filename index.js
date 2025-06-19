@@ -59,17 +59,21 @@ Example for "no event": {"title": null, "datetime": null, "location": null}
 
     // The logic is now much simpler!
     // We check for event and a non-null title from our prompt instructions.
-    if (event && event.title && event.datetime) {
-      console.log('Event extracted:', event);
+    // index.js (NEW way)
+if (event && event.title && event.datetime) {
+  console.log('Event extracted:', event); // event.datetime is still "2025-06-25T09:00:00"
 
-      // Convert datetime string to a Date object for the calendar/reminder functions
-      event.datetime = new Date(event.datetime);
+  // We will pass the whole event object, which includes the datetime string
+  await addEventToCalendar(event, 'Europe/Berlin'); // <-- Pass the time zone ID!
+  console.log('Event added to calendar');
 
-      await addEventToCalendar(event);
-      console.log('Event added to calendar');
-
-      scheduleReminder(event, sender);
-      console.log('Reminder scheduled');
+  // The reminder function will also need the corrected time
+  scheduleReminder(
+    { ...event, datetime: new Date(event.datetime) }, // Create Date object here if needed
+    sender,
+    'Europe/Berlin'
+  );
+  console.log('Reminder scheduled');
 
       return res.status(200).json({
         status: 'event_added',
