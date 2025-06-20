@@ -39,24 +39,28 @@ app.post('/whatsapp-webhook', async (req, res) => {
     console.log(`Processing message: "${message}" from ${sender}`);
 
     // This prompt is clearer and more robust
-    const prompt = `Analyze the following text to extract event details.
+// in index.js, inside the /whatsapp-webhook handler
+
+const prompt = `You are an expert assistant for parsing tasks, reminders, and events from natural language.
 Current date for context: ${new Date().toISOString()}
 Text: "${message}"
 
-Your response MUST be a single, raw JSON object and nothing else.
-Do not use Markdown (like \`\`\`json). Do not add any explanatory text.
+Your response MUST be a single, raw JSON object with no extra text or markdown.
 The JSON object must have these keys:
-- "title": string (the event title)
-- "datetime": string (the full date and time in ISO 8601 format, e.g., "2024-07-21T14:00:00")
-- "location": string or null
+- "title": string (The summary of the event, task, or reminder. E.g., "Call mom", "Dentist appointment", "Buy milk").
+- "datetime": string (The full date and time in ISO 8601 format, e.g., "2024-07-21T14:00:00"). If the year is not specified, assume the very next upcoming instance of that date.
+- "location": string or null.
+- "recurrence": string or null. For yearly events, use "RRULE:FREQ=YEARLY". Otherwise, null.
 
-If no specific event, date, or time can be found in the text, return a JSON object with a null value for "title".
-Example for "no event": {"title": null, "datetime": null, "location": null}
+If a coherent task/event with a specific date and time cannot be found, return a JSON object with a null value for "title".
+Example for a task: {"title": "Call mom", "datetime": "2024-10-31T17:00:00", "location": null, "recurrence": null}
+Example for an event: {"title": "Anands birthday", "datetime": "2025-07-05T09:00:00", "location": null, "recurrence": "RRULE:FREQ=YEARLY"}
+Example for no event: {"title": null, "datetime": null, "location": null, "recurrence": null}
 `;
 
     // parseWithGemini now returns a parsed object or null
     const event = await parseWithGemini(prompt);
-
+    console.log('Parsed object from Gemini:', JSON.stringify(event, null, 2));
     // The logic is now much simpler!
     // We check for event and a non-null title from our prompt instructions.
     // index.js (NEW way)
