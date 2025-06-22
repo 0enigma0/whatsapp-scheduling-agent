@@ -7,6 +7,8 @@ const https = require('https');
 const { parseWithGemini } = require('./parser');
 const { addEventToCalendar } = require('./calendar');
 const { scheduleReminder } = require('./reminder');
+const { rateLimiter } = require('./rate-limiter');
+
 
 dotenv.config();
 
@@ -27,6 +29,7 @@ if (!fs.existsSync('service_account.json')) {
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use('/whatsapp-webhook', rateLimiter);
 
 // index.js (cleaner webhook handler)
 app.post('/whatsapp-webhook', async (req, res) => {
