@@ -34,12 +34,28 @@ app.use('/whatsapp-webhook', rateLimiter);
 // index.js (cleaner webhook handler)
 app.post('/whatsapp-webhook', async (req, res) => {
   try {
-    console.log('Received webhook request:', req.body);
+    console.log('🔔 Received webhook request:', JSON.stringify(req.body, null, 2));
 
     const message = req.body.Body;
     const sender = req.body.From;
 
-    console.log(`Processing message: "${message}" from ${sender}`);
+    if (!message) {
+      console.error('❌ No message body received');
+      return res.status(400).json({ status: 'error', message: 'No message body received' });
+    }
+
+    if (!sender) {
+      console.error('❌ No sender information received');
+      return res.status(400).json({ status: 'error', message: 'No sender information received' });
+    }
+
+    console.log(`📝 Processing message: "${message}" from ${sender}`);
+
+    // Check if required environment variables are set
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ GEMINI_API_KEY environment variable is not set');
+      return res.status(500).json({ status: 'error', message: 'Server configuration error' });
+    }
 
     // This prompt is clearer and more robust
 // in index.js, inside the /whatsapp-webhook handler
@@ -61,42 +77,55 @@ Example for an event: {"title": "Anands birthday", "datetime": "2025-07-05T09:00
 Example for no event: {"title": null, "datetime": null, "location": null, "recurrence": null}
 `;
 
+    console.log('🤖 Sending prompt to Gemini API...');
     // parseWithGemini now returns a parsed object or null
     const event = await parseWithGemini(prompt);
-    console.log('Parsed object from Gemini:', JSON.stringify(event, null, 2));
+    console.log('📊 Parsed object from Gemini:', JSON.stringify(event, null, 2));
+    
     // The logic is now much simpler!
     // We check for event and a non-null title from our prompt instructions.
     // index.js (NEW way)
 if (event && event.title && event.datetime) {
-  console.log('Event extracted:', event); // event.datetime is still "2025-06-25T09:00:00"
+  console.log('✅ Event extracted:', event); // event.datetime is still "2025-06-25T09:00:00"
 
-  // We will pass the whole event object, which includes the datetime string
-  await addEventToCalendar(event, 'Europe/Berlin'); // <-- Pass the time zone ID!
-  console.log('Event added to calendar');
+  try {
+    // We will pass the whole event object, which includes the datetime string
+    console.log('📅 Adding event to calendar...');
+    await addEventToCalendar(event, 'Europe/Berlin'); // <-- Pass the time zone ID!
+    console.log('✅ Event added to calendar');
 
-  // The reminder function will also need the corrected time
-  scheduleReminder(
-    { ...event, datetime: new Date(event.datetime) }, // Create Date object here if needed
-    sender,
-    'Europe/Berlin'
-  );
-  console.log('Reminder scheduled');
+    // The reminder function will also need the corrected time
+    console.log('⏰ Scheduling reminder...');
+    scheduleReminder(
+      { ...event, datetime: new Date(event.datetime) }, // Create Date object here if needed
+      sender,
+      'Europe/Berlin'
+    );
+    console.log('✅ Reminder scheduled');
 
-      return res.status(200).json({
-        status: 'event_added',
-        event: event,
-        message: 'Event successfully processed and added to calendar'
-      });
+    return res.status(200).json({
+      status: 'event_added',
+      event: event,
+      message: 'Event successfully processed and added to calendar'
+    });
+  } catch (calendarError) {
+    console.error('❌ Error adding event to calendar:', calendarError);
+    return res.status(500).json({
+      status: 'calendar_error',
+      message: 'Event parsed successfully but failed to add to calendar',
+      error: calendarError.message
+    });
+  }
     }
 
-    console.log('No valid event detected in message.');
+    console.log('⚠️ No valid event detected in message.');
     res.status(200).json({
       status: 'no_event_detected',
       message: 'No valid event could be extracted from the message.'
     });
 
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('❌ Error processing webhook:', error);
     res.status(500).json({
       status: 'error',
       message: error.message

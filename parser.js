@@ -26,25 +26,36 @@ function extractJson(text) {
  */
 async function parseWithGemini(prompt) {
   try {
+    console.log('🤖 Initializing Gemini model...');
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    
+    console.log('🤖 Generating content with Gemini...');
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const rawText = response.text();
 
-    console.log('Raw Gemini response:', rawText);
+    console.log('📄 Raw Gemini response:', rawText);
 
     const jsonString = extractJson(rawText);
+    console.log('🔍 Extracted JSON string:', jsonString);
 
     if (!jsonString) {
-      console.error('Could not find any content to parse.');
+      console.error('❌ Could not find any content to parse.');
       return null;
     }
     
     // The final parse is still in a try-catch in case the JSON is malformed
-    return JSON.parse(jsonString);
+    const parsedJson = JSON.parse(jsonString);
+    console.log('✅ Successfully parsed JSON:', parsedJson);
+    return parsedJson;
 
   } catch (error) {
-    console.error('Error in parseWithGemini or JSON parsing:', error);
+    console.error('❌ Error in parseWithGemini or JSON parsing:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return null; // Return null on any error
   }
 }

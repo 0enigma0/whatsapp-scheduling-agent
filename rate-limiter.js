@@ -12,7 +12,7 @@ function getNextMidnight() {
 }
 
 const rateLimiter = (req, res, next) => {
-  const userId = req.body.WaId;
+  const userId = req.body.From;
 
   // If for some reason we don't have a user ID, let it pass.
   if (!userId) {
