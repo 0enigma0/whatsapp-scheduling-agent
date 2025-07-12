@@ -159,7 +159,22 @@ app.get('/test', (req, res) => {
   res.json({
     status: 'ok',
     message: 'WhatsApp scheduling agent is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: {
+      gemini_api_key: process.env.GEMINI_API_KEY ? '✅ Set' : '❌ Missing',
+      google_calendar_id: process.env.GOOGLE_CALENDAR_ID ? '✅ Set' : '❌ Missing',
+      service_account: (process.env.SERVICE_ACCOUNT_JSON || process.env.SERVICE_ACCOUNT_JSON_BASE64) ? '✅ Set' : '❌ Missing',
+      twilio_sid: process.env.TWILIO_SID ? '✅ Set' : '❌ Missing'
+    }
+  });
+});
+
+// Add a health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
